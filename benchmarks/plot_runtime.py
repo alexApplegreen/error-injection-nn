@@ -44,7 +44,6 @@ if __name__ == "__main__":
     labels = ['NEBULA', 'Legacy']
     ax.xaxis.set_major_locator(ticker.FixedLocator(positions))
     ax.xaxis.set_major_formatter(ticker.FixedFormatter(labels))
-    ax.set_title("Runtime comparison large model")
     ax.set_xlabel("Implementation")
     ax.set_ylabel('Runtime in ms')
     plt.show()

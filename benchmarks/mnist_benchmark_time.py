@@ -1,56 +1,55 @@
 from datetime import datetime
-import csv
 
-from tensorflow.keras.models import load_model
+from tensorflow.keras import layers, models
+import numpy as np
 
-from NEBULA.core import Injector
-from NEBULA.core.legacyInjector import LegacyInjector
+from NEBULA.core import Injector, LegacyInjector
 
 SAMPLESIZE = 5  # Modify this to set number of measurements
 COUNTER = 0
 
-def avgtime(time, i):
-    time_sum = COUNTER
-    time_sum += time.seconds
-    time_left = 0
-    if i != 0:
-        time_avg = time_sum / i
-        time_left = time_avg * (SAMPLESIZE - i)
-    return time_left
-
 if __name__ == "__main__":
-    model = load_model("../sample/sampledata/big_mnist_model.h5")
+    model = models.Sequential([
+        # Input layer: assumes input shape of (128,) for example
+        layers.Dense(256, activation='relu', input_shape=(128,)),  # 256 * (128 + 1) = 33,024 parameters
+        # Second hidden layer
+        layers.Dense(512, activation='relu'),  # 512 * (256 + 1) = 131,584 parameters
+        layers.Dense(128, activation='relu'),
+        layers.Dense(128, activation='relu'),
+        layers.Dense(128, activation='relu'),
+        layers.Dense(128, activation='relu'),
+        layers.Dense(128, activation='relu'),
+        # Output layer
+        layers.Dense(10, activation='softmax')  # 10 * (512 + 1) = 5,130 parameters
+    ])
 
-    with open("results_MNIST_SEI_old.csv", "w+") as file_old:
-        csvwriter = csv.writer(file_old, delimiter=",")
-        injector = LegacyInjector(model.layers)
+    model.summary()
 
-        for i in range(SAMPLESIZE):
+    times_nebula = list()
+    injector = Injector(model.layers)
+    for i in range(SAMPLESIZE):
 
-            time_start = datetime.now()
-            injector.injectError(model)
-            time_end = datetime.now()
+        time_start = datetime.now()
+        injector.injectError(model)
+        time_end = datetime.now()
 
-            time = time_end - time_start
-            csvwriter.writerow([time.microseconds])
-            COUNTER += time.seconds
-            time_left = avgtime(time, i)
+        time = time_end - time_start
+        times_nebula.append(time.microseconds)
+        print(f"{time.microseconds}")
 
-            print(f"Progress: {i}/{SAMPLESIZE}, projected time left: {time_left}s")
+    times_legacy = list()
+    injector = LegacyInjector(model.layers)
+    for i in range(SAMPLESIZE):
 
-    with open("results_MNIST_SEI_new.csv", "w+") as file_new:
-        csvwriter = csv.writer(file_new, delimiter=",")
-        injector = Injector(model.layers)
-        for i in range(SAMPLESIZE):
+        time_start = datetime.now()
+        injector.injectError(model)
+        time_end = datetime.now()
 
-            time_start = datetime.now()
-            injector.injectError(model)
-            time_end = datetime.now()
+        time = time_end - time_start
+        times_legacy.append(time.microseconds)
+        print(f"{time.microseconds}")
 
-            time = time_end - time_start
-            csvwriter.writerow([time.microseconds])
-            COUNTER += time.seconds
-            time_left = avgtime(time, i)
-            print(f"Progress: {i}/{SAMPLESIZE}, projected time left: {time_left}s")
+    avg_nebula = np.average(np.asarray(times_nebula))
+    avg_legacy = np.average(np.asarray(times_legacy))
 
-        print("Done with new measurements")
+    print(f"Nebula: {avg_nebula / 1000} ms, Legacy: {avg_legacy / 1000} ms")

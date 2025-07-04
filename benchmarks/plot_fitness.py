@@ -8,6 +8,7 @@ def moving_average(data, window_size):
 if __name__ == "__main__":
     df = pd.read_csv("./results/results_acc_mnist.csv", names=["BER", "Accuracy"])
     df['index'] = range(1, len(df) + 1)
+    df["Accuracy"] = df["Accuracy"].apply(lambda x: 1.0 - x)
     df.set_index('index', inplace=True)
 
     print(df.describe())
@@ -21,5 +22,5 @@ if __name__ == "__main__":
     plt.plot(x, y)
     plt.title("Accuracy Degradation")
     plt.xlabel("Bit Error Rate")
-    plt.ylabel("Model Accuracy")
+    plt.ylabel("Prediction Error")
     plt.show()
